@@ -1,0 +1,64 @@
+#! /bin/sh
+
+sl_start() {
+	# we put "" in the file we'll read later in 'sl2 end'
+	echo "" > /tmp/sl-file
+	clear
+	
+	echo "Now run 'sl2 end' in another console"
+	
+	# it should not come to the end, we'll kill it before
+	# why 254683?
+	# No reason, just to have something unusual for later doing 'ps' and 'grep'
+	sleep 254683
+	clear
+	
+	sl -e | tee /tmp/sl-file
+}
+
+sl_end() {
+
+	# check if there is a 'sl2 start' running
+	num=`ps ax | grep "sl2 start"  | wc -l`
+	if [ "$num" -lt "2" ]
+	then
+		echo "sl2: you have to run 'sl2 start' in another terminal
+     before running 'sl2 end'"
+	else
+		clear
+
+		pid=`ps ax | grep "sleep 254683" | awk '{print $1}' | head -n 1`
+		kill -9 $pid
+
+		num=`wc -l /tmp/sl-file | awk '{print $1}'`
+		# 292 is the number of rows in the st-file created with 'tee'
+		while [ "$num" -lt "292" ]
+		do
+			num=`wc -l /tmp/sl-file | awk '{print $1}'`
+		done
+
+		sl -e
+	fi
+}
+
+if [ "$#" = "0" ]
+then
+	echo "Usage: sl2 <start|end>"
+	echo  "\t* start: console in which the train starts"
+	echo  "\t* end: console in which the train ends"
+else
+	
+	if [ "$1" = "start" ]
+	then
+		sl_start
+	else if [ "$1" = "end" ]
+	then
+		sl_end
+	else
+		echo "sl2: option \"$1\" not valid"
+		echo "Usage: sl2 <start|end>"
+		echo "\t* start: console in which the train starts"
+		echo "\t* end: console in which the train ends"
+	fi
+	fi
+fi
