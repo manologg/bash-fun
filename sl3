@@ -1,11 +1,16 @@
 #! /bin/sh
 
 sl_start() {
-	# we put "" in the file we'll read later in 'sl2 end'
+	# we put "" in the file we'll read later in 'sl3 end'
 	echo "" > /tmp/sl-file
-	clear
 	
-	echo "Now run 'sl2 end' in another console"
+	cols=`tput cols`
+	expected_chars=$(echo "scale=2;22.5*${cols}*(10+(250/100-${cols}/100))" | bc | cut -d '.' -f 1)
+	# why?
+	# because I figured out which formula to use to get the amount of chars
+	# sl is going to fill when the train gets to the left end
+	
+	echo "Now run 'sl3 end' in another console"
 	
 	# it should not come to the end, we'll kill it before
 	# why 254683?
@@ -18,34 +23,41 @@ sl_start() {
 
 sl_end() {
 
-	# check if there is a 'sl2 start' running
-	num=`ps ax | grep "sl2 start"  | wc -l`
+	# check if there is a 'sl3 start' running
+	num=`ps ax | grep "sl3 start"  | wc -l`
 	if [ "$num" -lt "2" ]
 	then
-		echo "sl2: you have to run 'sl2 start' in another terminal
-     before running 'sl2 end'"
+		echo "sl3: you have to run 'sl3 start' in another terminal
+     before running 'sl3 end'"
 	else
 		clear
 
 		pid=`ps ax | grep "sleep 254683" | awk '{print $1}' | head -n 1`
 		kill -9 $pid
+		
+		expected_chars=`cat /tmp/sl3-start-expected-chars`
+		chars=`wc -c /tmp/sl-file | awk '{print $1}'`
 
-		num=`wc -l /tmp/sl-file | awk '{print $1}'`
-		# 292 is the number of rows in the st-file created with 'tee'
-		while [ "$num" -lt "292" ]
+		while [ "${chars}" -lt "${expected_chars}" ]
 		do
-			num=`wc -l /tmp/sl-file | awk '{print $1}'`
+			chars=`wc -c /tmp/sl-file | awk '{print $1}'`
 		done
 
 		sl -e
 	fi
 }
 
-if [ "$#" = "0" ]
-then
-	echo "Usage: sl2 <start|end>"
+usage() {
+
+	echo "Usage: sl3 <start|end>"
 	echo  "\t* start: console in which the train starts"
 	echo  "\t* end: console in which the train ends"
+
+}
+
+if [ "$#" = "0" ]
+then
+    usage
 else
 	
 	if [ "$1" = "start" ]
@@ -55,10 +67,8 @@ else
 	then
 		sl_end
 	else
-		echo "sl2: option \"$1\" not valid"
-		echo "Usage: sl2 <start|end>"
-		echo "\t* start: console in which the train starts"
-		echo "\t* end: console in which the train ends"
+		echo "sl3: option \"$1\" not valid"
+		usage
 	fi
 	fi
 fi
